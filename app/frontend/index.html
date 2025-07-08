@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-BR" x-data="app()">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>FastIdea - Geração de Protótipos</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Alpine.js -->
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+  <!-- Google Material Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24;
+    }
+  </style>
+</head>
+
+<body class="bg-blue-50 text-gray-800">
+  <!-- Header -->
+  <header class="bg-blue-800 text-white px-6 py-2 flex justify-between items-center">
+    <div class="flex items-center gap-2">
+      <img src="icone.png" alt="Logo FastIdea" class="h-10 invert" />
+      <span class="text-xl font-bold">Fast Desing</span>
+    </div>
+    <a href="https://github.com/seuusuario/fastidea" target="_blank" class="hover:underline">
+      github
+    </a>
+  </header>
+
+  <main class="p-8 space-y-6 flex flex-col items-center justify-center text-center" @paste="handlePaste">
+    <!-- Seção Principal: Formulário + Vídeo lado a lado -->
+    <div class="w-full max-w-6xl flex flex-col lg:flex-row items-start justify-center gap-8">
+      <!-- Formulário -->
+      <section class="flex-[2] bg-white shadow-md rounded p-6 space-y-4 flex flex-col items-center w-full">
+        <h1 class="text-2xl font-bold mb-2">Start your idea right now!</h1>
+        <h4 class="text-1xl mb-2">Provide a wireframe, a sketch created in Figma, or a simple screenshot of a similar system.</h4>
+
+        <div class="flex w-full items-center gap-4">
+          <input type="file" @change="handleUpload($event)"
+            class="flex-grow text-sm text-gray-700 border border-gray-300 rounded p-2" />
+          <button @click="enviarImagem" :disabled="enviandoImagem"
+            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 inline-flex items-center gap-2">
+            <span x-text="enviandoImagem ? 'Generating idea ...' : 'Start your idea'"></span>
+            <svg x-show="enviandoImagem" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none"
+              viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="white" stroke-width="4" />
+              <path class="opacity-75" fill="white" d="M4 12a8 8 0 018-8v8z" />
+            </svg>
+            <span x-show="!enviandoImagem" class="material-symbols-outlined">send</span>
+          </button>
+        </div>
+
+        <p class="text-gray-600 text-sm">Paste your screenshot here! Ctrl+v</p>
+
+        <template x-if="preview">
+          <img :src="preview" class="mt-4 max-w-xs rounded border" />
+        </template>
+      </section>
+
+      <!-- Vídeo (esconde em telas pequenas) -->
+      <div class="flex-[1] w-full max-w-md hidden lg:block">
+        <iframe width="560" height="315" src="https://www.youtube.com/embed/LQW3QKVgg9E?si=fhwkQh5i3PTIsn5-" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+      </div>
+    </div>
+
+    <!-- Visualizador em Tela Cheia estilizado como Navegador -->
+    <div x-show="iframeFull" x-cloak
+      class="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-6">
+      <div class="bg-white w-full h-full max-w-6xl rounded-lg shadow-2xl overflow-hidden flex flex-col">
+        <!-- Barra de Navegador Fake -->
+        <div class="flex items-center px-4 py-2 bg-gray-100 border-b border-gray-300">
+          <div class="flex items-center space-x-2">
+            <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+            <div class="w-3 h-3 bg-yellow-400 rounded-full"></div>
+            <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+          </div>
+          <div class="flex-1 mx-4">
+            <div
+              class="bg-white px-3 py-1 border border-gray-300 text-gray-700 text-sm rounded w-full text-center truncate">
+              prototipo.fastidea.local
+            </div>
+          </div>
+          <button @click="iframeFull = null"
+            class="ml-4 px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700">
+            Fechar
+          </button>
+        </div>
+        <iframe :srcdoc="iframeFull" class="flex-grow w-full border-none"></iframe>
+      </div>
+    </div>
+
+    <!-- Lista de Protótipos -->
+    <section x-show="cards.length > 0" class="w-full max-w-5xl">
+      <div class="mb-4 flex flex-wrap items-center gap-4 justify-between">
+        <div class="flex items-center gap-4">
+          <h2 class="text-xl font-semibold">Generated Prototypes</h2>
+          <button @click="limparTodos"
+            class="bg-blue-900 text-white px-4 py-2 rounded hover:bg-blue-950 text-sm flex items-center gap-2">
+            <span class="material-symbols-outlined">delete_forever</span>
+            Clean all
+          </button>
+        </div>
+      </div>
+
+      <div class="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+        <template x-for="(card, index) in cards" :key="index">
+          <div class="bg-white shadow rounded p-4 space-y-2 text-sm relative w-full max-w-sm mx-auto overflow-hidden">
+            <button @click="removerCard(index)" class="absolute top-2 right-2 text-gray-500 hover:text-red-600"
+              title="Remover">
+              <span class="material-symbols-outlined">delete</span>
+            </button>
+
+            <iframe :srcdoc="card.html" class="w-full h-32 border rounded"></iframe>
+
+            <div class="flex flex-wrap justify-between gap-2 pt-2">
+              <button @click="abrirModal(index)"
+                class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm flex items-center gap-1">
+                <span class="material-symbols-outlined">edit</span>
+                Modify
+              </button>
+              <button @click="iframeFull = card.html"
+                class="bg-blue-400 text-white px-3 py-1 rounded hover:bg-blue-500 text-sm flex items-center gap-1">
+                <span class="material-symbols-outlined">fullscreen</span>
+                Fullscreen
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </section>
+
+    <!-- Modal de Ajuste -->
+    <div x-show="mostrarModal" x-cloak
+      class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-6">
+      <div class="bg-white w-full max-w-md rounded-lg shadow-lg p-6">
+        <h2 class="text-xl font-bold mb-4">Modify Prototype</h2>
+        <textarea x-model="ajusteModal" rows="5" class="w-full border border-gray-300 rounded p-2 mb-4"
+          placeholder="Write down the modifications desired..."></textarea>
+        <div class="flex justify-end gap-2">
+          <button @click="mostrarModal = false"
+            class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Cancel</button>
+          <button @click="confirmarAjuste" :disabled="enviandoAjuste"
+            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 inline-flex items-center gap-2">
+            <span x-text="enviandoAjuste ? 'Applying ...' : 'Send'"></span>
+            <svg x-show="enviandoAjuste" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none"
+              viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="white" stroke-width="4" />
+              <path class="opacity-75" fill="white" d="M4 12a8 8 0 018-8v8z" />
+            </svg>
+            <span x-show="!enviandoAjuste" class="material-symbols-outlined">send</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card de Explicação DO PROJETO: aparece só quando NÃO há protótipos -->
+    <section x-show="cards.length === 0" class="w-full max-w-4xl bg-white shadow-md rounded p-6 mt-8 text-left">
+      <h2 class="text-2xl font-bold mb-2">About FastDesing</h2>
+      <p class="text-gray-700 text-base">
+         The <strong>FastDesing</strong> is an online tool to quickly turn sketches, wireframes, or screenshots  
+  of systems into navigable HTML prototypes.  
+  It’s ideal for generating high-fidelity prototypes to validate ideas, present to clients, or speed up  
+  interface development. 
+</p>
+      <p class="text-gray-700 text-base mt-2">
+        Upload an image, preview, adjust, and refine your prototypes in minutes — all without having to write HTML from scratch. 
+        Contact us at felipefo@gmail.com.
+      </p>
+    </section>
+
+  </main>
+
+  <!-- Dentro do seu script existente -->
+  <script>
+    function app() {
+      return {
+        preview: null,
+        file: null,
+        enviandoImagem: false,
+        enviandoAjuste: false, // NOVO LOADING PARA AJUSTE
+        cards: [],
+        mostrarModal: false,
+        ajusteModal: '',
+        cardSelecionado: null,
+        iframeFull: null,
+
+        handleUpload(event) {
+          this.file = event.target.files[0];
+          this.preview = URL.createObjectURL(this.file);
+        },
+
+        handlePaste(event) {
+          const items = event.clipboardData.items;
+          for (const item of items) {
+            if (item.type.indexOf('image') !== -1) {
+              const file = item.getAsFile();
+              this.file = file;
+              this.preview = URL.createObjectURL(file);
+              break;
+            }
+          }
+        },
+
+        async enviarImagem() {
+          if (!this.file) return alert('Selecione ou cole uma imagem.');
+          this.enviandoImagem = true;
+
+          const formData = new FormData();
+          formData.append('imagem', this.file);
+
+          try {
+            const res = await fetch('/gerar_html', { method: 'POST', body: formData });
+
+            if (!res.ok) throw new Error("Erro ao gerar a ideia, tente novamente!");
+
+            const { code, filename } = await res.json();
+            const card = { filename: filename, html: code, ajuste: '', loading: false };
+            this.cards.unshift(card);
+            this.salvarCards();
+            this.preview = null;
+            this.file = null;
+          } catch (err) {
+            alert('Erro ao enviar imagem.');
+          } finally {
+            this.enviandoImagem = false;
+          }
+        },
+
+        abrirModal(index) {
+          this.cardSelecionado = index;
+          this.ajusteModal = this.cards[index].ajuste || '';
+          this.mostrarModal = true;
+        },
+
+        async confirmarAjuste() {
+          if (this.cardSelecionado !== null) {
+            this.enviandoAjuste = true; // INICIA LOADING
+            const index = this.cardSelecionado;
+            const card = this.cards[index];
+            try {
+              const res = await fetch('/aplicar_ajuste', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  pasta: card.filename,
+                  ajustes: this.ajusteModal
+                })
+              });
+
+              const { code, filename } = await res.json();
+              const new_card = { filename: filename, html: code, ajuste: '', loading: false };
+              this.cards.unshift(new_card);
+              this.salvarCards();
+              this.ajusteModal = '';
+              this.mostrarModal = false;
+            } catch (err) {
+              alert('Erro ao aplicar ajuste.');
+            } finally {
+              this.enviandoAjuste = false; // TERMINA LOADING
+            }
+          }
+        },
+
+
+        removerCard(index) {
+          this.cards.splice(index, 1);
+          this.salvarCards();
+        },
+
+        limparTodos() {
+          if (confirm("Tem certeza que deseja remover todos os protótipos?")) {
+            this.cards = [];
+            localStorage.removeItem('prototiposFastIdea');
+          }
+        },
+
+        salvarCards() {
+          localStorage.setItem('prototiposFastIdea', JSON.stringify(this.cards));
+        },
+
+        carregarCards() {
+          const data = localStorage.getItem('prototiposFastIdea');
+          if (data) {
+            const prototipos = JSON.parse(data);
+            this.cards = prototipos.map(p => ({
+              filename: p.filename || '', // Garante persistir o nome
+              html: p.html,
+              ajuste: '',
+              loading: false
+            }));
+          }
+        },
+
+        init() {
+          this.carregarCards();
+        }
+      };
+    }
+
+    document.addEventListener('alpine:init', () => {
+      Alpine.data('app', app);
+    });
+  </script>
+
+</body>
+
+</html>

@@ -1,0 +1,11 @@
+langchain
+langgraph
+langchain_google_genai
+python-dotenv
+gunicorn
+fastapi==0.110.0
+uvicorn==0.29.0
+python-multipart
+google-ai-generativelanguage==0.6.15
+google-genai==1.18.0
+google-generativeai==0.8.5
